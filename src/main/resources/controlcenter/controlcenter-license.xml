@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<gridgain-license version="2.1">
+    <id>6fb4d5e6-8934-4449-a176-3197dbf62392</id>
+    <issue-date>02/26/2026</issue-date>
+    <user-org>GridGain Systems</user-org>
+    <license-note>This is a GridGain Control Center license</license-note>
+    <user-www>gridgain.com</user-www>
+    <type>ENT</type>
+    <expire-date>02/26/2027</expire-date>
+    <max-nodes>4</max-nodes>
+    <max-cpus>0</max-cpus>
+    <signature>303D021C6685C636A46056C5B9B85EC4D3E131FC8E54286691DD3D958CCCA4B9021D0093DB3D82ACD29E24AB801BD4AD912060443BC8C008CAE8F62CC78686</signature>
+</gridgain-license>

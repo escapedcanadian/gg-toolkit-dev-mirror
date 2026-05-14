@@ -1,0 +1,13 @@
+schema_version: 2
+schemas:
+  - name: customer
+    update_ratio: 0.10
+    columns:
+      - name: id
+        null_rate: 0.0
+        key: true
+        affinity: true
+        value_source: { kind: sequence, start: 1, step: 1 }
+      - name: name
+        null_rate: 0.02
+        value_source: { kind: datafaker, expression: "#{name.fullName}" }
