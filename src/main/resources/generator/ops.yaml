@@ -2,12 +2,22 @@ schema_version: 2
 targets:
   - name: gg8-trip
     kind: gg8-kv
-    cluster_name: toolkit-gcp-8a
+    cluster_name: example-gcp-8a
+  - name: gg9-trip
+    kind: gg9-kv
+    cluster_name: template-aws-9a
 scenarios:
   - name: customer-load
-    target: gg8-trip
+    target: gg9-trip
     root_schemas: [customer]
     rate: { kind: constant, ops_per_second: 50 }
     duration: { kind: count, value: 200 }
-    provisioning: emit
+    provisioning: apply
+    read_ratio: 0.10
+  - name: gg8-verify
+    target: gg8-trip
+    root_schemas: [customer]
+    rate: { kind: constant, ops_per_second: 20 }
+    duration: { kind: count, value: 200 }
+    provisioning: apply
     read_ratio: 0.10
