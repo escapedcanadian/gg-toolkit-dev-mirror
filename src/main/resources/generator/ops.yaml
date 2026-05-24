@@ -1,4 +1,4 @@
-schema_version: 2
+schema_version: 3
 targets:
   - name: gg8-trip
     kind: gg8-kv
@@ -21,3 +21,11 @@ scenarios:
     duration: { kind: count, value: 200 }
     provisioning: apply
     read_ratio: 0.10
+  - name: gg8-distributed-verify
+    target: gg8-trip
+    root_schemas: [customer]
+    rate: { kind: constant, ops_per_second: 20 }
+    duration: { kind: count, value: 200 }
+    provisioning: apply
+    read_ratio: 0.10
+    distribution: { replicas: 2, partition_count: 2 }
