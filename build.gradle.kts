@@ -12,7 +12,7 @@ buildscript {
 
 plugins {
     java
-    id("com.gridgain.demo.plugin") version "0.5.1-SNAPSHOT"
+    id("com.gridgain.demo.plugin") version "0.6.0-SNAPSHOT"
 }
 
 group = "org.gridgain.demo"
@@ -44,9 +44,9 @@ dependencies {
     // Data generator runtime — resolved by the dataGenerate task to build the forked JVM's classpath
     "dataGeneratorGg8Runtime"("com.gridgain.demo:gridgain-demo-data-generator-gg8:0.0.1-SNAPSHOT")
     // Plugin dependency for ActiveNodesLoader - code gracefully falls back if not available
-    implementation("com.gridgain.demo:gridgain-demo-gradle-plugin:0.5.1-SNAPSHOT")
+    implementation("com.gridgain.demo:gridgain-demo-gradle-plugin:0.6.0-SNAPSHOT")
     // UI project — provides the Ktor server for launchPluginUi task
-    runtimeOnly("com.gridgain.demo:gridgain-demo-ui:0.5.1-SNAPSHOT")
+    runtimeOnly("com.gridgain.demo:gridgain-demo-ui:0.6.0-SNAPSHOT")
     implementation("org.gridgain:ignite-core:9.1.3")
     implementation("org.gridgain:ignite-api:9.1.3")
     implementation("org.gridgain:ignite-runner:9.1.3")
