@@ -13,7 +13,7 @@
 #                                        Says which public key to encrypt TO. Safe to commit: public
 #                                        keys only.
 #
-#   secrets/demo-secrets.sops.yaml    <- A DATA file that holds secrets. The ".sops.yaml" in its name
+#   src/main/resources/secrets/demo-secrets.sops.yaml    <- A DATA file that holds secrets. The ".sops.yaml" in its name
 #                                        is only a naming convention meaning "this file is
 #                                        SOPS-encrypted". It has nothing to do with the file above.
 #
@@ -25,15 +25,15 @@
 # SOPS_AGE_KEY_FILE is for DECRYPTING — it does not help SOPS encrypt.
 # ---------------------------------------------------------------------------------------------------
 creation_rules:
-  # Everything under secrets/, matched loosely on purpose. SOPS matches a creation rule against the
-  # path of the file being *encrypted* — which is the plaintext one, `secrets/demo-secrets.yaml` or the
+  # Everything under src/main/resources/secrets/, matched loosely on purpose. SOPS matches a creation rule against the
+  # path of the file being *encrypted* — which is the plaintext one, `src/main/resources/secrets/demo-secrets.yaml` or the
   # example. A rule matching only `*.sops.yaml` therefore never fires, and sops reports "no matching
   # creation rules found", which does not hint that the rule is looking at the wrong name.
   #
   # `encrypted_regex` is deliberately absent so that EVERY value is encrypted rather than only fields
   # matching a pattern — a pattern silently leaves a new field in the clear the moment someone names it
   # something unexpected.
-  - path_regex: ^secrets/
+  - path_regex: ^src/main/resources/secrets/
     # Replace with YOUR public key. Get it with:
     #     age-keygen -y "$SOPS_AGE_KEY_FILE"
     # It starts with `age1` and is safe to commit. The matching PRIVATE key stays outside the repo.

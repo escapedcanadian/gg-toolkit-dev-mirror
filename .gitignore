@@ -20,6 +20,7 @@ build/
 # Demo Configuration (user-specific, contains credentials)
 environment-config.yaml
 demo-config.yaml
+demo-config-power.yaml
 **/gridgain-license.json
 **/controlcenter-license.json
 **/gridgain8-license.json
@@ -49,16 +50,28 @@ failure_tests.md
 # --- Secrets -------------------------------------------------------------------
 #
 # `.sops.` in a filename means encrypted. That is what makes this work: the encrypted and plaintext
-# forms have DIFFERENT names, so a path rule can tell them apart. Deny everything under secrets/, then
+# forms have DIFFERENT names, so a path rule can tell them apart. The directory sits beside the demo
+# config because that is what the toolkit resolves `source.file` against. Deny everything there, then
 # allow back only the two forms that are safe to commit.
 #
-#   secrets/demo-secrets.yaml         plaintext  -> ignored
-#   secrets/demo-secrets.sops.yaml    encrypted  -> committed
-#   secrets/demo-secrets.yaml.example placeholders -> committed
-secrets/*
-!secrets/*.sops.yaml
-!secrets/*.yaml.example
-!secrets/.gitkeep
+#   src/main/resources/secrets/demo-secrets.yaml         plaintext  -> ignored
+#   src/main/resources/secrets/demo-secrets.sops.yaml    encrypted  -> committed
+#   src/main/resources/secrets/demo-secrets.yaml.example placeholders -> committed
+src/main/resources/secrets/*
+!src/main/resources/secrets/*.sops.yaml
+!src/main/resources/secrets/*.yaml.example
+!src/main/resources/secrets/.gitkeep
+
+# Runtime scratch the toolkit writes under `demo.working_directory`, which the shipped configs set to
+# `.` — so these land at the repo root. Root-anchored so they cannot match the source directory above.
+#
+# /secrets/ is the important one: DeploySecretsAction stages DECRYPTED Kubernetes Secret manifests
+# there, one per secret. It used to be covered by accident, back when the encrypted source directory
+# was also at the root and its `secrets/*` deny rule caught these too. Moving the source beside the
+# demo config took that protection away, so it is stated explicitly here.
+/secrets/
+/ssh/
+/image-artifacts/
 
 # SOPS private keys never belong in the repo. The PUBLIC key in .sops.yaml is fine and is meant to be
 # committed.

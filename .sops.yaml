@@ -8,8 +8,8 @@
 # `--age` argument. Without this file, `sops --encrypt` fails with "no creation rules", which says nothing
 # about a missing public key.
 creation_rules:
-  # Everything under secrets/. `encrypted_regex` is deliberately absent, so every value is encrypted
+  # Everything under src/main/resources/secrets/. `encrypted_regex` is deliberately absent, so every value is encrypted
   # rather than a named subset — a rule that encrypts only fields matching a pattern silently leaves a
   # new field in the clear the moment someone names it something unexpected.
-  - path_regex: ^secrets/
+  - path_regex: ^src/main/resources/secrets/
     age: age1t3qkpfqaj927jn38ecx8qvk4e9qwn86lft84kpscgxgyqalp9gzs97hl32

@@ -54,9 +54,12 @@ fi
 # there is no window in which a real secrets file sits unencrypted on disk — which is exactly where
 # credentials get left behind. Values are placeholders at this point; edit them with `sops`, which also
 # never writes plaintext to disk.
-plaintext=secrets/demo-secrets.yaml
-encrypted=secrets/demo-secrets.sops.yaml
-example=secrets/demo-secrets.yaml.example
+# Beside the demo config, because that is the directory the toolkit resolves a secret's
+# `source.file` against — the same convention cluster/ and generator/ already follow.
+dir=src/main/resources/secrets
+plaintext=$dir/demo-secrets.yaml
+encrypted=$dir/demo-secrets.sops.yaml
+example=$dir/demo-secrets.yaml.example
 
 if [ -f "$encrypted" ]; then
     if grep -q '^sops:' "$encrypted"; then
@@ -67,7 +70,7 @@ if [ -f "$encrypted" ]; then
 else
     [ -f "$example" ] || die "$example is missing from this repo."
     sops --encrypt --input-type yaml --output-type yaml "$example" > "$encrypted" \
-        || { rm -f "$encrypted"; die "Could not encrypt $example. If sops reported 'no creation rules', .sops.yaml lacks a rule for secrets/ — that is about a missing public recipient, not SOPS_AGE_KEY_FILE."; }
+        || { rm -f "$encrypted"; die "Could not encrypt $example. If sops reported 'no creation rules', .sops.yaml lacks a rule for $dir — that is about a missing public recipient, not SOPS_AGE_KEY_FILE."; }
     chmod 600 "$encrypted"
     say "Created $encrypted by encrypting the example. It never existed as plaintext."
 fi

@@ -1,7 +1,7 @@
 #!/bin/sh
 # Refuses to commit a secrets file that was never encrypted.
 #
-# This is the check .gitignore cannot perform. `secrets/demo-secrets.sops.yaml` has the same name whether
+# This is the check .gitignore cannot perform. `src/main/resources/secrets/demo-secrets.sops.yaml` has the same name whether
 # or not `sops --encrypt` ever ran on it, so no path rule distinguishes the safe case from the one that
 # leaks a credential into git history — where removing it means rewriting history, not deleting a file.
 #
@@ -9,7 +9,7 @@
 # (./scripts/bootstrap-secrets.sh does this for you.)
 set -eu
 
-staged=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^secrets/.*\.sops\.yaml$' || true)
+staged=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^src/main/resources/secrets/.*\.sops\.yaml$' || true)
 [ -n "$staged" ] || exit 0
 
 failed=0

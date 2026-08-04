@@ -1,15 +1,18 @@
 #!/bin/sh
-# Encrypts secrets/demo-secrets.yaml into secrets/demo-secrets.sops.yaml and removes the plaintext.
+# Encrypts src/main/resources/secrets/demo-secrets.yaml into src/main/resources/secrets/demo-secrets.sops.yaml and removes the plaintext.
 #
-# For the bulk-editing path only. Prefer `sops secrets/demo-secrets.sops.yaml`, which edits in place and
+# For the bulk-editing path only. Prefer `sops src/main/resources/secrets/demo-secrets.sops.yaml`, which edits in place and
 # never writes plaintext to disk at all; this exists for when you would rather work in a plain file.
 #
 # The two names differ on purpose: `.sops.` means encrypted, `.gitignore` denies the plaintext name, and
 # this script is what moves content from one to the other.
 set -eu
 
-plaintext=secrets/demo-secrets.yaml
-encrypted=secrets/demo-secrets.sops.yaml
+# Beside the demo config, because that is the directory the toolkit resolves a secret's
+# `source.file` against — the same convention cluster/ and generator/ already follow.
+dir=src/main/resources/secrets
+plaintext=$dir/demo-secrets.yaml
+encrypted=$dir/demo-secrets.sops.yaml
 
 [ -f "$plaintext" ] || {
     printf 'ERROR: %s does not exist.\n' "$plaintext" >&2
@@ -36,7 +39,7 @@ tmp="$encrypted.tmp.$$"
 trap 'rm -f "$tmp"' EXIT
 sops --encrypt --input-type yaml --output-type yaml "$plaintext" > "$tmp" || {
     printf 'ERROR: sops could not encrypt %s.\n' "$plaintext" >&2
-    printf 'If it reported "no creation rules", .sops.yaml is missing or has no rule for secrets/.\n' >&2
+    printf 'If it reported "no creation rules", .sops.yaml is missing or has no rule for that directory.\n' >&2
     printf 'That is about a missing public recipient, not about SOPS_AGE_KEY_FILE.\n' >&2
     printf 'Run ./scripts/bootstrap-secrets.sh to set it up.\n' >&2
     exit 1
