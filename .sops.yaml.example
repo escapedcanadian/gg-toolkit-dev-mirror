@@ -1,0 +1,35 @@
+# Template for `.sops.yaml` — SOPS's own configuration. Copy to `.sops.yaml` and put your public key in.
+#
+#     cp .sops.yaml.example .sops.yaml
+#
+# Or let the bootstrap script do it, which is less error-prone:
+#
+#     ./scripts/bootstrap-secrets.sh
+#
+# ---------------------------------------------------------------------------------------------------
+# TWO DIFFERENT FILES, CONFUSINGLY SIMILAR NAMES. Worth reading once.
+#
+#   .sops.yaml                        <- THIS kind of file. SOPS's configuration. Repo root, hidden.
+#                                        Says which public key to encrypt TO. Safe to commit: public
+#                                        keys only.
+#
+#   secrets/demo-secrets.sops.yaml    <- A DATA file that holds secrets. The ".sops.yaml" in its name
+#                                        is only a naming convention meaning "this file is
+#                                        SOPS-encrypted". It has nothing to do with the file above.
+#
+# Missing the first one is the common mistake, and the error does not help: `sops --encrypt` reports
+#
+#     config file not found, or has no creation rules, and no keys provided through command line options
+#
+# which is about a missing public *recipient*, and never mentions public keys. Note also that
+# SOPS_AGE_KEY_FILE is for DECRYPTING — it does not help SOPS encrypt.
+# ---------------------------------------------------------------------------------------------------
+creation_rules:
+  # Everything under secrets/. `encrypted_regex` is deliberately absent so that EVERY value is
+  # encrypted, rather than only fields matching a pattern — a pattern silently leaves a new field in
+  # the clear the moment someone names it something unexpected.
+  - path_regex: secrets/.*\.sops\.yaml$
+    # Replace with YOUR public key. Get it with:
+    #     age-keygen -y "$SOPS_AGE_KEY_FILE"
+    # It starts with `age1` and is safe to commit. The matching PRIVATE key stays outside the repo.
+    age: age1REPLACE_WITH_YOUR_PUBLIC_KEY

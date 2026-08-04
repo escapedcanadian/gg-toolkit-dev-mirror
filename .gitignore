@@ -46,3 +46,13 @@ docker-arm/docker/cli/*
 jdbc/*
 failure_tests.md
 
+# --- Secrets -------------------------------------------------------------------
+#
+# A SOPS-encrypted secrets/*.sops.yaml is safe to commit; a plaintext one is not. The naming convention
+# cannot tell them apart — the file has the same name either way — so gitignore alone cannot make this
+# safe. These rules cover the plaintext names the docs assume, and .githooks/pre-commit covers the case
+# that actually bit: a *.sops.yaml that was never encrypted.
+secrets/*.plain.yaml
+secrets/*.plaintext.yaml
+secrets/demo-secrets.yaml
+secrets/*.decrypted.yaml

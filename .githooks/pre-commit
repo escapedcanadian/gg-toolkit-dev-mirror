@@ -1,0 +1,33 @@
+#!/bin/sh
+# Refuses to commit a secrets file that was never encrypted.
+#
+# This is the check .gitignore cannot perform. `secrets/demo-secrets.sops.yaml` has the same name whether
+# or not `sops --encrypt` ever ran on it, so no path rule distinguishes the safe case from the one that
+# leaks a credential into git history — where removing it means rewriting history, not deleting a file.
+#
+# Enable with:  git config core.hooksPath .githooks
+# (./scripts/bootstrap-secrets.sh does this for you.)
+set -eu
+
+staged=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^secrets/.*\.sops\.yaml$' || true)
+[ -n "$staged" ] || exit 0
+
+failed=0
+for f in $staged; do
+    # Skip the shipped templates: they are plaintext by design and hold only placeholder values.
+    case "$f" in *.example) continue ;; esac
+    # The STAGED content, not the working tree's: those can differ, and it is the staged bytes that would
+    # be committed.
+    if ! git show ":$f" | grep -qE '^sops:'; then
+        printf 'REFUSED: %s is staged but has no sops: metadata block, so it is not encrypted.\n' "$f" >&2
+        failed=1
+    fi
+done
+
+if [ "$failed" -ne 0 ]; then
+    printf '\nEncrypt it, then stage it again:\n    sops --encrypt --in-place <file>\n\n' >&2
+    printf 'If that fails with "no creation rules", .sops.yaml is missing or lacks a rule for this path.\n' >&2
+    printf 'That error is about a missing public recipient, not about SOPS_AGE_KEY_FILE.\n' >&2
+    printf 'Run ./scripts/bootstrap-secrets.sh to set it up.\n\n' >&2
+    exit 1
+fi
