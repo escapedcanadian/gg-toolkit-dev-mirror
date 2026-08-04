@@ -11,5 +11,5 @@ creation_rules:
   # Everything under secrets/. `encrypted_regex` is deliberately absent, so every value is encrypted
   # rather than a named subset — a rule that encrypts only fields matching a pattern silently leaves a
   # new field in the clear the moment someone names it something unexpected.
-  - path_regex: secrets/.*\.sops\.yaml$
+  - path_regex: ^secrets/
     age: age1t3qkpfqaj927jn38ecx8qvk4e9qwn86lft84kpscgxgyqalp9gzs97hl32

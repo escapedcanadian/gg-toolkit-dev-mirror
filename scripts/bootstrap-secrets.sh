@@ -49,20 +49,33 @@ else
     say "Created .sops.yaml with your public key."
 fi
 
-# --- 4. the secrets data file -----------------------------------------------------------------------
-secrets_file=secrets/demo-secrets.sops.yaml
-if [ -f "$secrets_file" ]; then
-    if grep -q '^sops:' "$secrets_file"; then
-        say "$secrets_file exists and is encrypted."
+# --- 4. the secrets data file, born encrypted -------------------------------------------------------
+# The example is encrypted DIRECTLY into the .sops.yaml form. The plaintext form is never created, so
+# there is no window in which a real secrets file sits unencrypted on disk — which is exactly where
+# credentials get left behind. Values are placeholders at this point; edit them with `sops`, which also
+# never writes plaintext to disk.
+plaintext=secrets/demo-secrets.yaml
+encrypted=secrets/demo-secrets.sops.yaml
+example=secrets/demo-secrets.yaml.example
+
+if [ -f "$encrypted" ]; then
+    if grep -q '^sops:' "$encrypted"; then
+        say "$encrypted exists and is encrypted."
     else
-        say ""
-        say "WARNING: $secrets_file exists and is NOT encrypted. Edit its values, then run:"
-        say "    sops --encrypt --in-place $secrets_file"
+        die "$encrypted exists but is NOT encrypted. That name is reserved for encrypted content. Move it to $plaintext and run ./scripts/encrypt-secrets.sh"
     fi
 else
-    [ -f "$secrets_file.example" ] || die "$secrets_file.example is missing from this repo."
-    cp "$secrets_file.example" "$secrets_file"
-    say "Created $secrets_file from the example. Its values are plaintext placeholders."
+    [ -f "$example" ] || die "$example is missing from this repo."
+    sops --encrypt --input-type yaml --output-type yaml "$example" > "$encrypted" \
+        || { rm -f "$encrypted"; die "Could not encrypt $example. If sops reported 'no creation rules', .sops.yaml lacks a rule for secrets/ — that is about a missing public recipient, not SOPS_AGE_KEY_FILE."; }
+    chmod 600 "$encrypted"
+    say "Created $encrypted by encrypting the example. It never existed as plaintext."
+fi
+
+if [ -f "$plaintext" ]; then
+    say ""
+    say "NOTE: $plaintext exists. It is gitignored, but it is plaintext — remove it once you have"
+    say "      encrypted its contents with ./scripts/encrypt-secrets.sh"
 fi
 
 # --- 5. the safety net ------------------------------------------------------------------------------
@@ -78,9 +91,11 @@ fi
 
 say ""
 say "Next:"
-say "  1. Edit $secrets_file — replace every '-replace-me' value."
-say "  2. sops --encrypt --in-place $secrets_file"
-say "  3. Reference the entries from demo-config.yaml's 'secrets:' section."
+say "  1. Replace every '-replace-me' value:"
+say "         sops $encrypted"
+say "     That opens your editor on the decrypted content and re-encrypts on save. No plaintext"
+say "     touches the disk."
+say "  2. Reference the entries from demo-config.yaml's 'secrets:' section by their top-level key."
 say ""
 say "Verify at any time with:"
-say "  grep -q '^sops:' $secrets_file && echo ENCRYPTED || echo PLAINTEXT"
+say "  grep -q '^sops:' $encrypted && echo ENCRYPTED || echo PLAINTEXT"

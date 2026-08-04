@@ -48,11 +48,19 @@ failure_tests.md
 
 # --- Secrets -------------------------------------------------------------------
 #
-# A SOPS-encrypted secrets/*.sops.yaml is safe to commit; a plaintext one is not. The naming convention
-# cannot tell them apart — the file has the same name either way — so gitignore alone cannot make this
-# safe. These rules cover the plaintext names the docs assume, and .githooks/pre-commit covers the case
-# that actually bit: a *.sops.yaml that was never encrypted.
-secrets/*.plain.yaml
-secrets/*.plaintext.yaml
-secrets/demo-secrets.yaml
-secrets/*.decrypted.yaml
+# `.sops.` in a filename means encrypted. That is what makes this work: the encrypted and plaintext
+# forms have DIFFERENT names, so a path rule can tell them apart. Deny everything under secrets/, then
+# allow back only the two forms that are safe to commit.
+#
+#   secrets/demo-secrets.yaml         plaintext  -> ignored
+#   secrets/demo-secrets.sops.yaml    encrypted  -> committed
+#   secrets/demo-secrets.yaml.example placeholders -> committed
+secrets/*
+!secrets/*.sops.yaml
+!secrets/*.yaml.example
+!secrets/.gitkeep
+
+# SOPS private keys never belong in the repo. The PUBLIC key in .sops.yaml is fine and is meant to be
+# committed.
+*.agekey
+keys.txt
