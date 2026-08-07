@@ -77,3 +77,10 @@ src/main/resources/secrets/*
 # committed.
 *.agekey
 keys.txt
+
+# Backups and snapshots of a demo config are still a demo config: they carry the same credentials the
+# original does. The rule above names the files by their exact names, which a *.backup or a dated
+# snapshot slips past — and `git add -A` then sweeps one in. Added after exactly that happened.
+demo-config*.backup
+demo-config*.bak
+demo-config*-backup*
