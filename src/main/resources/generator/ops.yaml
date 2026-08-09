@@ -1,4 +1,8 @@
-schema_version: 3
+# Bumped 3 -> 4 by hand. The generator's ConfigMigrationRunner would do it on first run, but it
+# rewrites this file through SnakeYAML and drops every comment in it. MigrateOpsV3toV4 is a
+# documented no-op apart from the version pointer — v4 only adds an optional top-level `metrics:`
+# block, and absence keeps the v3 behaviour — so the hand-bump is exactly equivalent.
+schema_version: 4
 targets:
   - name: gg8-trip
     kind: gg8-kv
@@ -6,6 +10,12 @@ targets:
   - name: gg9-trip
     kind: gg9-kv
     cluster_name: template-aws-9a
+  # The Power lab's GG8 cluster. cluster_name is the lookup key into client-endpoints.yaml, so it
+  # must match the clusters entry in demo-config-power.yaml exactly — a mismatch is reported by
+  # DemoAddressFinder on the machine, not here.
+  - name: power-payments-gg8
+    kind: gg8-kv
+    cluster_name: power-payments
 scenarios:
   - name: customer-load
     target: gg9-trip
@@ -29,3 +39,17 @@ scenarios:
     provisioning: apply
     read_ratio: 0.10
     distribution: { replicas: 2, partition_count: 2 }
+  # Plan Task 10's validation run. Deliberately small and bounded: this is proving that the archive
+  # installed, the JDK runs it, and DemoAddressFinder resolved the cluster — not measuring anything.
+  # No 'distribution' block: a host generator is a single JVM under systemd, so there is no second
+  # replica to partition work across.
+  #
+  # Any throughput read off this lab is contended — the generator shares vm04's 64 CPUs with the
+  # Prometheus and Grafana measuring the demo. Do not quote a number from here as a clean benchmark.
+  - name: power-payments-load
+    target: power-payments-gg8
+    root_schemas: [customer]
+    rate: { kind: constant, ops_per_second: 50 }
+    duration: { kind: count, value: 2000 }
+    provisioning: apply
+    read_ratio: 0.10

@@ -12,7 +12,7 @@ buildscript {
 
 plugins {
     java
-    id("com.gridgain.demo.plugin") version "0.6.0-SNAPSHOT"
+    id("com.gridgain.demo.plugin") version "0.7.0-SNAPSHOT"
 }
 
 group = "org.gridgain.demo"
