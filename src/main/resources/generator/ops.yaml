@@ -1,8 +1,65 @@
-# Bumped 3 -> 4 by hand. The generator's ConfigMigrationRunner would do it on first run, but it
-# rewrites this file through SnakeYAML and drops every comment in it. MigrateOpsV3toV4 is a
-# documented no-op apart from the version pointer — v4 only adds an optional top-level `metrics:`
-# block, and absence keeps the v3 behaviour — so the hand-bump is exactly equivalent.
-schema_version: 4
+# Bumped by hand. The generator's ConfigMigrationRunner would do it on first run, but it rewrites
+# this file through SnakeYAML and drops every comment in it. Each step so far is a documented no-op
+# apart from the version pointer — v4 only adds an optional top-level `metrics:` block and v5 an
+# optional `control:` block, and absence of either keeps the prior behaviour — so the hand-bumps are
+# exactly equivalent.
+#
+# AT 5 as of 2026-08-11, and the prerequisite is met. The archive installed on vm04 is now built
+# from `feat/load-generator-control` (which merged the dist modules in as 34aa25c), so it carries
+# MigrateOpsV4toV5 and accepts v5. The earlier pin at 4 existed because the installed dist came from
+# the `feat/host-distribution` worktree, which supports schema_version <= 4 and rejects 5 outright
+# ("only supports up to schema_version 4").
+#
+# If an older archive is ever redeployed to these hosts, drop this back to 4 and re-comment the
+# `control:` block below — the two must move together, or the generator rejects the file on startup.
+schema_version: 5
+
+# Live throughput/latency export, and runtime rate control, for the UI's Load page (/load).
+# Both are optional and both are commented out here because the address depends on the demo:
+# `kafka_bootstrap` is resolved from the GENERATOR's vantage point, so an in-cluster run wants the
+# cluster-internal broker DNS while a local run wants a reachable one. The UI uses its own separate
+# address (`uiKafkaBootstrap` in gradle.properties) — do not reuse this value for it.
+#
+# vm04's address: the broker (message_brokers.payments-bus) runs on the same machine as this
+# generator, so this is the generator's own vantage point. The UI needs its own setting
+# (uiKafkaBootstrap in gradle.properties) — in this lab the address happens to be identical because
+# the VMs have routable IPs, which is a property of this lab and not a rule.
+#
+# `metrics:` is a v4 feature, so it is valid at the pinned version above. It still produces nothing
+# the UI can use until the installed generator archive is rebuilt from a branch carrying `runGroup`
+# on MetricsSnapshot: the UI aggregates by that field and drops snapshots without it, rather than
+# guessing which run a snapshot belongs to.
+metrics:
+  kafka_bootstrap: "129.40.56.113:9092"
+  topic: "datagen-metrics"
+  interval_ms: 1000
+
+# Runtime rate control for the Load page's slider. Requires ops schema_version 5, which the archive
+# now installed on vm04 provides — see the version note at the top of this file.
+#
+# Same vantage-point rule as `metrics:` above: this address is resolved by the GENERATOR, and the UI
+# uses its own `uiKafkaBootstrap`. They are identical here only because these VMs have routable IPs.
+control:
+  kafka_bootstrap: "129.40.56.113:9092"
+  topic: "datagen-control"
+
+# OpenTelemetry export of the generator's own instruments (in-flight, op duration histogram,
+# errors, target rate, observed rate). This is the Power lab's metrics path: it needs no Kafka,
+# unlike the `metrics:`/`control:` blocks above, which exist only to drive the UI's Load page.
+#
+# The endpoint is the otelcol receiver stood up by the `power-monitoring` monitor on vm04, the
+# same collector the GG8 cluster exports to via host_otel_endpoint in cluster_templates.power-gg8.
+# From there: otelcol -> Prometheus (:9090) -> Grafana (:3000).
+#
+# NOTE THE PORT: 4318, not 4317. The generator's OTLP exporter is HTTP-based (okhttp), so it must
+# talk to the collector's OTLP/HTTP receiver on 4318. Pointing it at 4317 — the gRPC receiver the
+# GG8 cluster uses via host_otel_protocol: GRPC — makes the collector reset the connection and
+# every export fails with "Failed to export metrics ... Connection reset". Same collector, two
+# receivers, one port each.
+otel:
+  exporter: otlp
+  endpoint: http://129.40.56.113:4318
+
 targets:
   - name: gg8-trip
     kind: gg8-kv
@@ -13,9 +70,9 @@ targets:
   # The Power lab's GG8 cluster. cluster_name is the lookup key into client-endpoints.yaml, so it
   # must match the clusters entry in demo-config-power.yaml exactly — a mismatch is reported by
   # DemoAddressFinder on the machine, not here.
-  - name: power-payments-gg8
+  - name: power-demo-gg8
     kind: gg8-kv
-    cluster_name: power-payments
+    cluster_name: power-demo
 scenarios:
   - name: customer-load
     target: gg9-trip
@@ -46,8 +103,8 @@ scenarios:
   #
   # Any throughput read off this lab is contended — the generator shares vm04's 64 CPUs with the
   # Prometheus and Grafana measuring the demo. Do not quote a number from here as a clean benchmark.
-  - name: power-payments-load
-    target: power-payments-gg8
+  - name: power-load
+    target: power-demo-gg8
     root_schemas: [customer]
     rate: { kind: constant, ops_per_second: 50 }
     duration: { kind: count, value: 2000 }

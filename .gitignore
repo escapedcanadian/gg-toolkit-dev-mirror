@@ -84,3 +84,11 @@ keys.txt
 demo-config*.backup
 demo-config*.bak
 demo-config*-backup*
+
+# Claude Code's accumulated tool-permission allowlists. These are per-machine session state — they
+# grow one entry per approved command and are full of absolute paths from whoever ran them — not
+# project configuration anyone else can use. Named individually rather than ignoring `.claude/`
+# wholesale, so a skill added under `.claude/skills/` is still trackable the way the plugin's and the
+# generator's are.
+.claude/settings.json
+.claude/settings.local.json
