@@ -1,18 +1,22 @@
 # Bumped by hand. The generator's ConfigMigrationRunner would do it on first run, but it rewrites
-# this file through SnakeYAML and drops every comment in it. Each step so far is a documented no-op
-# apart from the version pointer — v4 only adds an optional top-level `metrics:` block and v5 an
-# optional `control:` block, and absence of either keeps the prior behaviour — so the hand-bumps are
-# exactly equivalent.
+# this file through SnakeYAML and drops every comment in it — and this file is mostly comments
+# recording which broker address belongs to which vantage point, so losing them is expensive.
 #
-# AT 5 as of 2026-08-11, and the prerequisite is met. The archive installed on vm04 is now built
-# from `feat/load-generator-control` (which merged the dist modules in as 34aa25c), so it carries
-# MigrateOpsV4toV5 and accepts v5. The earlier pin at 4 existed because the installed dist came from
-# the `feat/host-distribution` worktree, which supports schema_version <= 4 and rejects 5 outright
-# ("only supports up to schema_version 4").
+# AT 6 as of 2026-08-18. Unlike every step before it, v6 is NOT a no-op: it makes
+# `histogram_highest_ms` and `histogram_significant_digits` REQUIRED inside `metrics:`, and both are
+# set below. Steps v1..v5 were documented no-ops apart from the version pointer (v4 added an optional
+# `metrics:` block, v5 an optional `control:` block), which is why those hand-bumps were exactly
+# equivalent to running the migration.
 #
-# If an older archive is ever redeployed to these hosts, drop this back to 4 and re-comment the
-# `control:` block below — the two must move together, or the generator rejects the file on startup.
-schema_version: 5
+# PREREQUISITE, and it is a real one: the generator archive installed on the hosts must be built from
+# `feat/load-generator-control` at or after 2026-08-18. An older archive rejects this file outright
+# ("only supports up to schema_version 5") and the run fails at config parse, before it starts.
+#
+# If an older archive is ever redeployed to these hosts, drop this back to 5 and delete the two
+# histogram keys below — the version and those keys must move together, or the generator rejects the
+# file on startup. 5 is the floor while the `control:` block below is present, since that block is a
+# v5 feature.
+schema_version: 6
 
 # Live throughput/latency export, and runtime rate control, for the UI's Load page (/load).
 # Both are optional and both are commented out here because the address depends on the demo:
@@ -33,6 +37,21 @@ metrics:
   kafka_bootstrap: "129.40.56.113:9092"
   topic: "datagen-metrics"
   interval_ms: 1000
+  # Whole-run latency histogram, published on this same topic alongside the interval figures. The UI
+  # merges the per-instance histograms into the fleet percentiles a completed run card shows —
+  # merges, because percentiles do not compose: the max p90 across instances is the worst instance's
+  # p90, not the fleet's. Both keys are REQUIRED from ops v6.
+  #
+  # 60000ms is the recommended ceiling: an operation slower than a minute is pathological for a load
+  # test, and one that exceeds the ceiling is clamped to it rather than dropped, so a p99 pinned at
+  # 60000 reads as "slower than we can measure" rather than silently vanishing.
+  #
+  # 3 significant digits is HdrHistogram's standard 0.1% precision. The valid range is 1-4, capped at
+  # 4 because each extra digit costs roughly 100x more histogram memory per tick — 3 digits is about
+  # 280KB/sec per instance, 5 would have been ~21MB/sec. The ceiling above is nearly free by
+  # comparison, since memory is logarithmic in it.
+  histogram_highest_ms: 60000
+  histogram_significant_digits: 3
 
 # Runtime rate control for the Load page's slider. Requires ops schema_version 5, which the archive
 # now installed on vm04 provides — see the version note at the top of this file.
