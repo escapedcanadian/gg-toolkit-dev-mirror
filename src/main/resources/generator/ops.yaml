@@ -2,21 +2,29 @@
 # this file through SnakeYAML and drops every comment in it — and this file is mostly comments
 # recording which broker address belongs to which vantage point, so losing them is expensive.
 #
-# AT 6 as of 2026-08-18. Unlike every step before it, v6 is NOT a no-op: it makes
-# `histogram_highest_ms` and `histogram_significant_digits` REQUIRED inside `metrics:`, and both are
-# set below. Steps v1..v5 were documented no-ops apart from the version pointer (v4 added an optional
-# `metrics:` block, v5 an optional `control:` block), which is why those hand-bumps were exactly
-# equivalent to running the migration.
+# AT 7 as of 2026-08-25. v7 REMOVES the top-level `targets:` block and the per-scenario `target:`
+# key: the cluster a run writes to is now chosen at launch (`--targetCluster` on the CLI, or the UI
+# Load page's target selector) rather than declared here. Both are gone from this file, and the
+# cluster names they carried are recorded where the block used to be — that mapping exists nowhere
+# else now, so do not delete it without moving it somewhere.
+#
+# v6 was the other non-no-op step: it makes `histogram_highest_ms` and
+# `histogram_significant_digits` REQUIRED inside `metrics:`, and both are set below. Steps v1..v5
+# were documented no-ops apart from the version pointer (v4 added an optional `metrics:` block, v5 an
+# optional `control:` block), which is why those hand-bumps were exactly equivalent to running the
+# migration.
 #
 # PREREQUISITE, and it is a real one: the generator archive installed on the hosts must be built from
-# `feat/load-generator-control` at or after 2026-08-18. An older archive rejects this file outright
-# ("only supports up to schema_version 5") and the run fails at config parse, before it starts.
+# `feat/load-generator-control` at or after 2026-08-22, when v7 landed. An older archive rejects this
+# file outright ("only supports up to schema_version N") and the run fails at config parse, before it
+# starts.
 #
-# If an older archive is ever redeployed to these hosts, drop this back to 5 and delete the two
-# histogram keys below — the version and those keys must move together, or the generator rejects the
-# file on startup. 5 is the floor while the `control:` block below is present, since that block is a
-# v5 feature.
-schema_version: 6
+# If an older archive is ever redeployed to these hosts, drop this back to the version that archive
+# supports and undo the matching features together — at 6, restore a `targets:` block and a `target:`
+# on every scenario; at 5, also delete the two histogram keys below. The version and its features
+# must move together, or the generator rejects the file on startup. 5 is the floor while the
+# `control:` block below is present, since that block is a v5 feature.
+schema_version: 7
 
 # Live throughput/latency export, and runtime rate control, for the UI's Load page (/load).
 # Both are optional and both are commented out here because the address depends on the demo:
@@ -79,36 +87,38 @@ otel:
   exporter: otlp
   endpoint: http://129.40.56.113:4318
 
-targets:
-  - name: gg8-trip
-    kind: gg8-kv
-    cluster_name: example-gcp-8a
-  - name: gg9-trip
-    kind: gg9-kv
-    cluster_name: template-aws-9a
-  # The Power lab's GG8 cluster. cluster_name is the lookup key into client-endpoints.yaml, so it
-  # must match the clusters entry in demo-config-power.yaml exactly — a mismatch is reported by
-  # DemoAddressFinder on the machine, not here.
-  - name: power-demo-gg8
-    kind: gg8-kv
-    cluster_name: power-demo
+# The `targets:` block that stood here was deleted by the v6 -> v7 hand-migration. v7 chooses the
+# cluster at launch instead — `--targetCluster` on the generator CLI, or the UI Load page's target
+# selector — so a scenario no longer names one. The cluster names those targets carried, which are
+# now what you pass at launch, were:
+#
+#   gg8-trip        gg8-kv  example-gcp-8a
+#   gg9-trip        gg9-kv  template-aws-9a
+#   power-demo-gg8  gg8-kv  power-demo     <- the Power lab's GG8 cluster
+#
+# A cluster name is still the lookup key into client-endpoints.yaml, so whatever you pass must match
+# the clusters entry in the demo config exactly — a mismatch is reported by DemoAddressFinder on the
+# machine, not here.
+#
+# Which scenario below used which, before the target: lines were removed:
+#   customer-load           template-aws-9a
+#   gg8-verify              example-gcp-8a
+#   gg8-distributed-verify  example-gcp-8a
+#   power-load              power-demo
 scenarios:
   - name: customer-load
-    target: gg9-trip
     root_schemas: [customer]
     rate: { kind: constant, ops_per_second: 50 }
     duration: { kind: count, value: 200 }
     provisioning: apply
     read_ratio: 0.10
   - name: gg8-verify
-    target: gg8-trip
     root_schemas: [customer]
     rate: { kind: constant, ops_per_second: 20 }
     duration: { kind: count, value: 200 }
     provisioning: apply
     read_ratio: 0.10
   - name: gg8-distributed-verify
-    target: gg8-trip
     root_schemas: [customer]
     rate: { kind: constant, ops_per_second: 20 }
     duration: { kind: count, value: 200 }
@@ -123,7 +133,6 @@ scenarios:
   # Any throughput read off this lab is contended — the generator shares vm04's 64 CPUs with the
   # Prometheus and Grafana measuring the demo. Do not quote a number from here as a clean benchmark.
   - name: power-load
-    target: power-demo-gg8
     root_schemas: [customer]
     rate: { kind: constant, ops_per_second: 50 }
     duration: { kind: count, value: 2000 }
