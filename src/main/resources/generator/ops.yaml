@@ -138,3 +138,26 @@ scenarios:
     duration: { kind: count, value: 2000 }
     provisioning: apply
     read_ratio: 0.10
+  # What one host JVM can sustain writing to this cluster. The rate is set far above anything
+  # reachable so the limiter never throttles — the observed rate is then the ceiling itself rather
+  # than the ceiling-or-the-target, whichever is lower. `read_ratio: 0.0` because the documented
+  # goal this answers is *Maximum Sustained Write*; mixing reads in measures something else.
+  #
+  # Unbounded on purpose: `external_signal` both declares that intent and lifts the internal
+  # one-minute cap on `until_stop_condition`, so the run lasts until a `stop` command arrives on the
+  # control channel (or a SIGTERM from dataGeneratorTeardown, which is also graceful now). That is
+  # what makes a plateau observable — a fixed duration would just report whatever the warmup average
+  # happened to be.
+  #
+  # A host generator is ONE JVM with one emitting thread, bounded by GG round-trip latency, and
+  # `replicas` does not apply to it. So this measures a single client, not the cluster's capacity —
+  # and it is contended, per the note above: vm04 also runs the Prometheus and Grafana watching the
+  # demo. Indicative, not a benchmark.
+  - name: power-max-write
+    root_schemas: [customer]
+    rate: { kind: constant, ops_per_second: 1000000 }
+    duration: { kind: until_stop_condition }
+    stop_conditions:
+      - { kind: external_signal }
+    provisioning: apply
+    read_ratio: 0.0
