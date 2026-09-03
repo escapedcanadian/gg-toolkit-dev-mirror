@@ -42,7 +42,7 @@ dependencies {
     // Explicitly add standard SnakeYAML to override any Android variants
     implementation("org.yaml:snakeyaml:1.33")
     // Data generator runtime — resolved by the dataGenerate task to build the forked JVM's classpath
-    "dataGeneratorGg8Runtime"("com.gridgain.demo:gridgain-demo-data-generator-gg8:0.0.1-SNAPSHOT")
+    "dataGeneratorGg8Runtime"("com.gridgain.demo:gridgain-demo-data-generator-gg8:0.7.0-SNAPSHOT")
     // Plugin dependency for ActiveNodesLoader - code gracefully falls back if not available
     implementation("com.gridgain.demo:gridgain-demo-gradle-plugin:0.6.0-SNAPSHOT")
     // UI project — provides the Ktor server for launchPluginUi task
