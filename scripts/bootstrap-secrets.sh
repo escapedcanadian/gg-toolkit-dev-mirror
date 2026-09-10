@@ -14,11 +14,18 @@ die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 # is right on macOS and useless on Linux, where these arrive from a package manager or as static
 # binaries — and this script is a prerequisite, so its advice is the first thing a new user acts on.
 # Kept in step with SopsInstallAdvice.kt by hand; there is no classpath here to share it from.
+#
+# It names both tools rather than opening with "Install both", which is what it used to do. The
+# callers below each name one tool — "sops is not installed", "age is not installed" — so "both"
+# arrived with nothing to have been both of, and whichever tool was not in the first sentence went
+# unmentioned entirely. Saying what each one does as well, because "age" is not guessable from
+# "sops" and a second install otherwise looks like a mistake in the instructions.
+pair_purpose="Two tools are needed: sops encrypts and decrypts the file, and age holds the key it uses."
 install_advice() {
     case "$(uname -s)" in
-        Darwin) echo "Install both with: brew install sops age" ;;
-        Linux)  echo "Install both from your distribution's package manager if it carries them, or take the static binaries from https://github.com/getsops/sops/releases and https://github.com/FiloSottile/age/releases" ;;
-        *)      echo "Install both: on macOS 'brew install sops age'; elsewhere your package manager, or https://github.com/getsops/sops/releases and https://github.com/FiloSottile/age/releases" ;;
+        Darwin) echo "$pair_purpose Install them with: brew install sops age" ;;
+        Linux)  echo "$pair_purpose Install them from your distribution's package manager if it carries them, or take the static binaries from https://github.com/getsops/sops/releases and https://github.com/FiloSottile/age/releases" ;;
+        *)      echo "$pair_purpose On macOS 'brew install sops age'; elsewhere your package manager, or https://github.com/getsops/sops/releases and https://github.com/FiloSottile/age/releases" ;;
     esac
 }
 
