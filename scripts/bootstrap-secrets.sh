@@ -10,8 +10,20 @@ set -eu
 say() { printf '%s\n' "$*"; }
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
-command -v sops >/dev/null 2>&1 || die "sops is not installed. Install it with: brew install sops age"
-command -v age-keygen >/dev/null 2>&1 || die "age is not installed. Install it with: brew install sops age"
+# Install advice for the machine running this, not for the one it was written on. `brew install`
+# is right on macOS and useless on Linux, where these arrive from a package manager or as static
+# binaries — and this script is a prerequisite, so its advice is the first thing a new user acts on.
+# Kept in step with SopsInstallAdvice.kt by hand; there is no classpath here to share it from.
+install_advice() {
+    case "$(uname -s)" in
+        Darwin) echo "Install both with: brew install sops age" ;;
+        Linux)  echo "Install both from your distribution's package manager if it carries them, or take the static binaries from https://github.com/getsops/sops/releases and https://github.com/FiloSottile/age/releases" ;;
+        *)      echo "Install both: on macOS 'brew install sops age'; elsewhere your package manager, or https://github.com/getsops/sops/releases and https://github.com/FiloSottile/age/releases" ;;
+    esac
+}
+
+command -v sops >/dev/null 2>&1 || die "sops is not installed. $(install_advice)"
+command -v age-keygen >/dev/null 2>&1 || die "age is not installed. $(install_advice)"
 
 # --- 1. the private key, which decrypts -------------------------------------------------------------
 key_file="${SOPS_AGE_KEY_FILE:-$HOME/.config/sops/age/keys.txt}"
