@@ -41,7 +41,7 @@ sops --encrypt --input-type yaml --output-type yaml "$plaintext" > "$tmp" || {
     printf 'ERROR: sops could not encrypt %s.\n' "$plaintext" >&2
     printf 'If it reported "no creation rules", .sops.yaml is missing or has no rule for that directory.\n' >&2
     printf 'That is about a missing public recipient, not about SOPS_AGE_KEY_FILE.\n' >&2
-    printf 'Run ./scripts/bootstrap-secrets.sh to set it up.\n' >&2
+    printf 'This project has a scripts directory: run ./scripts/bootstrap-secrets.sh from the project root to set it up.\n' >&2
     exit 1
 }
 
