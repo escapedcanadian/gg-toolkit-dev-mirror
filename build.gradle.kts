@@ -12,7 +12,7 @@ buildscript {
 
 plugins {
     java
-    id("com.gridgain.demo.plugin") version "0.7.0-SNAPSHOT"
+    id("com.gridgain.demo.plugin") version "0.8.0-SNAPSHOT"
 }
 
 group = "org.gridgain.demo"
@@ -47,12 +47,12 @@ dependencies {
     // ClassNotFoundException at the moment of use rather than at configuration time. They are kept
     // off `implementation` deliberately — this project's own classpath carries GG9 ignite-core, and
     // the same class names from two GridGain versions cannot share a classloader.
-    "dataGeneratorGg8Runtime"("com.gridgain.demo:gridgain-demo-data-generator-gg8:0.7.0-SNAPSHOT")
-    "dataGeneratorGg9Runtime"("com.gridgain.demo:gridgain-demo-data-generator-gg9:0.7.0-SNAPSHOT")
+    "dataGeneratorGg8Runtime"("com.gridgain.demo:gridgain-demo-data-generator-gg8:0.8.0-SNAPSHOT")
+    "dataGeneratorGg9Runtime"("com.gridgain.demo:gridgain-demo-data-generator-gg9:0.8.0-SNAPSHOT")
     // Plugin dependency for ActiveNodesLoader - code gracefully falls back if not available
-    implementation("com.gridgain.demo:gridgain-demo-gradle-plugin:0.7.0-SNAPSHOT")
+    implementation("com.gridgain.demo:gridgain-demo-gradle-plugin:0.8.0-SNAPSHOT")
     // UI project — provides the Ktor server for launchPluginUi task
-    runtimeOnly("com.gridgain.demo:gridgain-demo-ui:0.7.0-SNAPSHOT")
+    runtimeOnly("com.gridgain.demo:gridgain-demo-ui:0.8.0-SNAPSHOT")
     implementation("org.gridgain:ignite-core:9.1.3")
     implementation("org.gridgain:ignite-api:9.1.3")
     implementation("org.gridgain:ignite-runner:9.1.3")
