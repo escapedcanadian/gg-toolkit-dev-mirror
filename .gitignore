@@ -19,8 +19,13 @@ build/
 
 # Demo Configuration (user-specific, contains credentials)
 environment-config.yaml
-demo-config.yaml
-demo-config-power.yaml
+# Every demo configuration, by pattern rather than by name.
+#
+# These were listed individually, so the wizard writing `demo-config-hosts-gg8.yaml` produced a
+# file git offered to commit — and a demoConfigFile carries licence paths, identity-file paths and
+# sometimes credentials outright. Nothing under this pattern is tracked, so widening it removes a
+# class of accident rather than changing what is in the repository.
+demo-config*.yaml
 # Any licence, in either form the vendor issues it. GridGain 9 licences are JSON;
 # GridGain 8 and Control Center licences are XML, which earlier rules did not cover at all.
 **/*-license.json
