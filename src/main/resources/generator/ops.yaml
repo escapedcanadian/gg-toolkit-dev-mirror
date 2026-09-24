@@ -24,25 +24,55 @@
 # on every scenario; at 5, also delete the two histogram keys below. The version and its features
 # must move together, or the generator rejects the file on startup. 5 is the floor while the
 # `control:` block below is present, since that block is a v5 feature.
-schema_version: 7
+#
+# Hand-bumped 7 -> 8 rather than letting MigrateOpsV7toV8 run, for the same reason the 20 -> 21
+# bump of demo-config-power.yaml was hand-applied: the migration rewrites the file through
+# SnakeYAML and discards every comment, and two thirds of this file is comment. v8 adds one
+# required key, `concurrency`, to every scenario; the migration would write 1 into each, so
+# stating them below is exactly equivalent.
+#
+# Hand-migrated 8 -> 9 on 2026-09-19, and ⚠️ THIS ONE IS NOT A BARE VERSION BUMP. Unlike every
+# step before it, MigrateOpsV8toV9 rewrites values: it turns each `kafka_bootstrap: X` into
+# `broker: { kind: address, bootstrap_servers: X }`. So hand-bumping the number alone leaves a
+# file the v9 JSONSchema rejects for a missing `broker`. Both blocks below were rewritten by hand
+# to match — and then changed again to the `kind: element` form, which the migration deliberately
+# will not produce (see the note above `metrics:`).
+#
+# v9 also invalidates every deployed generator archive, as v7 and v8 did: an archive built before
+# v9 refuses this file outright ("only supports up to schema_version 8"). Rebuild and redeploy the
+# data-generator-gg8 dist in the same pass, and refresh its sha256 in demo-config-power.yaml.
+schema_version: 9
 
 # Live throughput/latency export, and runtime rate control, for the UI's Load page (/load).
-# Both are optional and both are commented out here because the address depends on the demo:
-# `kafka_bootstrap` is resolved from the GENERATOR's vantage point, so an in-cluster run wants the
-# cluster-internal broker DNS while a local run wants a reachable one. The UI uses its own separate
-# address (`uiKafkaBootstrap` in gradle.properties) — do not reuse this value for it.
+# Both are optional. From v9 each names its broker rather than repeating an address, and there are
+# two forms:
 #
-# vm04's address: the broker (message_brokers.payments-bus) runs on the same machine as this
-# generator, so this is the generator's own vantage point. The UI needs its own setting
-# (uiKafkaBootstrap in gradle.properties) — in this lab the address happens to be identical because
-# the VMs have routable IPs, which is a property of this lab and not a rule.
+#   broker: { kind: element, name: <a message_brokers entry in demo-config.yaml> }
+#       The toolkit deployed it. Both the generator and the UI resolve the name independently —
+#       the generator from the broker-endpoints.yaml the toolkit pushes beside the run, the UI
+#       from the bootstrap_servers recorded in deployment.yaml. Nothing is copied into this file,
+#       so redeploying the broker somewhere else is picked up on the next run instead of leaving
+#       a stale literal behind. This is what both blocks below use.
 #
-# `metrics:` is a v4 feature, so it is valid at the pinned version above. It still produces nothing
-# the UI can use until the installed generator archive is rebuilt from a branch carrying `runGroup`
-# on MetricsSnapshot: the UI aggregates by that field and drops snapshots without it, rather than
-# guessing which run a snapshot belongs to.
+#   broker: { kind: address, bootstrap_servers: "<host:port>" }
+#       A broker this demo does not deploy. Resolved from the GENERATOR's vantage point, so an
+#       in-cluster run wants cluster-internal DNS while a local run wants a reachable address.
+#
+# The long-standing "two addresses, never derive one from the other" rule still holds, but only
+# for that second form. It is why `uiKafkaBootstrap` exists in gradle.properties — and with the
+# reference form below, that property is no longer needed at all: the UI resolves 'payments-bus'
+# for itself. (Previously this comment recorded that the two addresses happened to be identical
+# in this lab because the VMs have routable IPs. That coincidence no longer matters.)
+#
+# ⚠️ MigrateOpsV8toV9 will never write the `kind: element` form. It cannot: only a deployment
+# knows that 129.40.56.113:9092 is 'payments-bus', and a migration that guessed would name a
+# broker that might not exist. Switching to it is always a deliberate hand-edit, as this was.
+#
+# Still produces nothing the UI can use unless the installed generator archive carries `runGroup`
+# on MetricsSnapshot — the UI aggregates by that field and drops snapshots without it rather than
+# guessing which run they belong to. Any archive new enough for v9 has it.
 metrics:
-  kafka_bootstrap: "129.40.56.113:9092"
+  broker: { kind: element, name: payments-bus }
   topic: "datagen-metrics"
   interval_ms: 1000
   # Whole-run latency histogram, published on this same topic alongside the interval figures. The UI
@@ -61,13 +91,15 @@ metrics:
   histogram_highest_ms: 60000
   histogram_significant_digits: 3
 
-# Runtime rate control for the Load page's slider. Requires ops schema_version 5, which the archive
-# now installed on vm04 provides — see the version note at the top of this file.
+# Runtime rate control for the Load page's slider. Requires ops schema_version 5 at minimum; the
+# `broker:` shape below requires 9 — see the version note at the top of this file.
 #
-# Same vantage-point rule as `metrics:` above: this address is resolved by the GENERATOR, and the UI
-# uses its own `uiKafkaBootstrap`. They are identical here only because these VMs have routable IPs.
+# The same broker as `metrics:` above, and named rather than addressed for the same reasons. The
+# two blocks are independent — a demo may legitimately publish telemetry to one broker and take
+# commands from another — so naming the same one twice is a choice, not a redundancy the schema
+# could collapse.
 control:
-  kafka_bootstrap: "129.40.56.113:9092"
+  broker: { kind: element, name: payments-bus }
   topic: "datagen-control"
 
 # OpenTelemetry export of the generator's own instruments (in-flight, op duration histogram,
@@ -106,58 +138,34 @@ otel:
 #   gg8-distributed-verify  example-gcp-8a
 #   power-load              power-demo
 scenarios:
-  - name: customer-load
-    root_schemas: [customer]
-    rate: { kind: constant, ops_per_second: 50 }
-    duration: { kind: count, value: 200 }
-    provisioning: apply
-    read_ratio: 0.10
-  - name: gg8-verify
-    root_schemas: [customer]
-    rate: { kind: constant, ops_per_second: 20 }
-    duration: { kind: count, value: 200 }
-    provisioning: apply
-    read_ratio: 0.10
-  - name: gg8-distributed-verify
-    root_schemas: [customer]
-    rate: { kind: constant, ops_per_second: 20 }
-    duration: { kind: count, value: 200 }
-    provisioning: apply
-    read_ratio: 0.10
-    distribution: { replicas: 2, partition_count: 2 }
-  # Plan Task 10's validation run. Deliberately small and bounded: this is proving that the archive
-  # installed, the JDK runs it, and DemoAddressFinder resolved the cluster — not measuring anything.
-  # No 'distribution' block: a host generator is a single JVM under systemd, so there is no second
-  # replica to partition work across.
+- name: "power-max-write"
+  root_schemas:
+  - "customer"
+  # 64 threads x 2 processes = 128 operations in flight, the best measured on the UNCAPPED
+  # cluster (unlimited licence, 64 vCPU/node, 128 cluster vCPUs):
   #
-  # Any throughput read off this lab is contended — the generator shares vm04's 64 CPUs with the
-  # Prometheus and Grafana measuring the demo. Do not quote a number from here as a clean benchmark.
-  - name: power-load
-    root_schemas: [customer]
-    rate: { kind: constant, ops_per_second: 50 }
-    duration: { kind: count, value: 2000 }
-    provisioning: apply
-    read_ratio: 0.10
-  # What one host JVM can sustain writing to this cluster. The rate is set far above anything
-  # reachable so the limiter never throttles — the observed rate is then the ceiling itself rather
-  # than the ceiling-or-the-target, whichever is lower. `read_ratio: 0.0` because the documented
-  # goal this answers is *Maximum Sustained Write*; mixing reads in measures something else.
+  #      in flight |  capped 32 vCPU/node   |  uncapped 64 vCPU/node
+  #      ----------|------------------------|------------------------
+  #         64     |  120,932 @ 0.60 ms     |  151,767 @ 0.5 ms
+  #        128     |   69,743 @ 2.1 ms  <-  |  161,501 @ 0.6 ms
+  #        256     |   12,712 @ 9.4 ms  <-  |  160,829 @ 0.7 ms
+  #        384     |        -               |  153,977 @ 1.1 ms
   #
-  # Unbounded on purpose: `external_signal` both declares that intent and lifts the internal
-  # one-minute cap on `until_stop_condition`, so the run lasts until a `stop` command arrives on the
-  # control channel (or a SIGTERM from dataGeneratorTeardown, which is also graceful now). That is
-  # what makes a plateau observable — a fixed duration would just report whatever the warmup average
-  # happened to be.
+  # Read that carefully: uncapped, throughput is FLAT from 64 in flight onward — 151k/161k/160k
+  # /153k is one number with noise. The knee is therefore at or BELOW 64, and it did not move
+  # when the vCPUs doubled. What changed is only what happens PAST the knee: a plateau instead
+  # of the collapse marked <-. So the affinity mask caused the collapse; it did not set the
+  # ceiling, and the ceiling rose only 121k -> 161k (+33%) while vCPUs went 64 -> 128.
   #
-  # A host generator is ONE JVM with one emitting thread, bounded by GG round-trip latency, and
-  # `replicas` does not apply to it. So this measures a single client, not the cluster's capacity —
-  # and it is contended, per the note above: vm04 also runs the Prometheus and Grafana watching the
-  # demo. Indicative, not a benchmark.
-  - name: power-max-write
-    root_schemas: [customer]
-    rate: { kind: constant, ops_per_second: 1000000 }
-    duration: { kind: until_stop_condition }
-    stop_conditions:
-      - { kind: external_signal }
-    provisioning: apply
-    read_ratio: 0.0
+  # Still a ceiling near 160k with the servers at only ~10 of 64 cores (~17%), so something
+  # else gates it — but a plateau, which is benign, not the 10x cliff.
+  concurrency: 64
+  rate:
+    kind: "constant"
+    ops_per_second: 1000000
+  duration:
+    kind: "until_stop_condition"
+  stop_conditions:
+  - kind: "external_signal"
+  provisioning: "apply"
+  read_ratio: 0.5

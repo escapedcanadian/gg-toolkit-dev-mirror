@@ -1,7 +1,22 @@
-schema_version: 2
+schema_version: 3
 schemas:
   - name: customer
-    update_ratio: 0.10
+    update_ratio: 0.50
+    # One replica of every row, and a put that does not return until that replica has it.
+    #
+    # backups: 1 on a two-node cluster means each node holds a copy of every partition — primary
+    # for about half of them, backup for the rest — so the load drives both servers and a read can
+    # be answered locally wherever it lands (readFromBackup is GridGain's default).
+    #
+    # full_sync is the half that makes the measurement honest: with primary_sync (the default) a
+    # put returns as soon as the primary has the row and the replication cost never appears in the
+    # latency anyone reads off the dashboard.
+    #
+    # ⚠️ Only applied when the cache is CREATED (this scenario is `provisioning: apply`). GG8
+    # rejects getOrCreateCache against an existing cache with a different config, so changing
+    # either value means destroying the cache first.
+    backups: 1
+    write_synchronization_mode: full_sync
     columns:
       - name: id
         null_rate: 0.0

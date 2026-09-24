@@ -1,0 +1,33 @@
+schema_version: 3
+# Identical to data.yaml in every respect except the key sequence's starting point.
+#
+# It exists because the key space is divided per generator *element*: GeneratorFleet.plan hands one
+# element's fleet the whole domain and stripes it across that element's own processes. Two elements
+# loading one cluster therefore both believe they own everything and start their sequence at the
+# same value, so they write colliding keys — silently, with no error and no sign in the metrics.
+# Offsetting the start by a billion keeps the two disjoint by hand.
+#
+# ⚠️ This is a workaround for these experiments, not a design. A machine (or an element) should be
+# able to declare the key domain it owns, so several generators loading one cluster are disjoint by
+# construction rather than by an operator remembering to offset a literal. Recorded as future work
+# in the plan; come back to it.
+#
+# Everything else here MUST stay in step with data.yaml. The two elements create the same cache, and
+# GG8 rejects getOrCreateCache against an existing cache with a different configuration — so a
+# backups or write_synchronization_mode that drifted would fail the second element's first put.
+schemas:
+  - name: customer
+    update_ratio: 0.50
+    backups: 1
+    write_synchronization_mode: full_sync
+    columns:
+      - name: id
+        null_rate: 0.0
+        key: true
+        affinity: true
+        # 1_000_000_000 rather than 1. The other element has never issued a billion keys in a run
+        # (the whole dataset after a full sweep is ~35M), so the two ranges cannot meet.
+        value_source: { kind: sequence, start: 1000000000, step: 1 }
+      - name: name
+        null_rate: 0.02
+        value_source: { kind: datafaker, expression: "#{name.fullName}" }
