@@ -28,8 +28,15 @@ environment-config.yaml
 demo-config*.yaml
 # Any licence, in either form the vendor issues it. GridGain 9 licences are JSON;
 # GridGain 8 and Control Center licences are XML, which earlier rules did not cover at all.
-**/*-license.json
-**/*-license.xml
+#
+# Matched on the word anywhere in the name, not as a `-license` suffix. The suffix form missed
+# `gridgain-license-gg8-unlimited.xml` — a real, signed Ultimate licence that sat untracked-but-
+# offerable for three days. Naming a licence for what it unlocks is the obvious thing to do, so the
+# pattern has to survive it. Both spellings, because the vendor uses one and we write the other.
+**/*license*.json
+**/*license*.xml
+**/*licence*.json
+**/*licence*.xml
 
 
 
@@ -91,6 +98,15 @@ demo-config*.backup
 demo-config*.bak
 demo-config*-backup*
 
+# The generator's own config backups, written by the ops/data migration runner — one per step, so a
+# single 7 -> 9 migration leaves four. They are not secret the way a demo config is, they are just
+# noise that outlives the migration it guarded. Delete them once the new version has run.
+**/*.yaml.*.backup
+
+# Rendered reports. `power-lab-report.md` is the source and is tracked; the PDF is what pandoc makes
+# of it, and a 250 KB binary that no diff can read does not belong beside its own source.
+*-report.pdf
+
 # Claude Code's accumulated tool-permission allowlists. These are per-machine session state — they
 # grow one entry per approved command and are full of absolute paths from whoever ran them — not
 # project configuration anyone else can use. Named individually rather than ignoring `.claude/`
@@ -98,3 +114,9 @@ demo-config*-backup*
 # generator's are.
 .claude/settings.json
 .claude/settings.local.json
+
+# Cleanup safety nets, written by hand before a schema migration or a state change.
+# Timestamped so several can coexist; delete them once the change they guard is proven.
+# demo-config-*.yaml is ignored above, so a backup of one is the only copy that exists.
+config-backup-*/
+deployment-archive-*/
